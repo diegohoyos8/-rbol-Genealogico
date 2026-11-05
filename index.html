@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Árbol González Hoyos</title>
+<meta name="description" content="El árbol genealógico que construimos entre toda la familia">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%8C%B3%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: árbol genealógico dibujado de arriba abajo por ramas, con un asistente de tres pasos para que cualquier familiar agregue a alguien */
+:root{
+  --paper:#f4f7f1; --card:#ffffff; --ink:#1d2922; --muted:#5a695f; --line:#c9d4c8;
+  --accent:#2c6a4c; --accent-soft:#e0ede4; --him:#dfe9f3; --her:#f3e4e6; --danger:#a3392a;
+  --display:"Alegreya", Georgia, "Times New Roman", serif;
+  --body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#111714; --card:#19211c; --ink:#e5ebe6; --muted:#9aa89f; --line:#34433a;
+  --accent:#7cc29c; --accent-soft:#1c2e24; --him:#1d2a36; --her:#33232a; --danger:#e3806f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111714; --card:#19211c; --ink:#e5ebe6; --muted:#9aa89f; --line:#34433a;
+  --accent:#7cc29c; --accent-soft:#1c2e24; --him:#1d2a36; --her:#33232a; --danger:#e3806f; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45}
+.wrap{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 96px}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.8rem,6vw,2.6rem);line-height:1.05;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0}
+.btn{border:2px solid var(--accent);background:var(--accent);color:var(--paper);border-radius:12px;padding:11px 18px;font-weight:700;font-size:1rem}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.danger{border-color:var(--danger);background:transparent;color:var(--danger)}
+.btn.danger.armed{background:var(--danger);color:var(--paper)}
+.btn.big{font-size:1.1rem;padding:14px 22px}
+.link{border:0;background:none;color:var(--accent);font-weight:700;padding:4px 0;text-decoration:underline;text-underline-offset:3px}
+
+.welcome{margin:18px 0 0;padding:16px 18px;border-radius:14px;background:var(--accent-soft);display:grid;gap:8px}
+.welcome h2{font-family:var(--display);margin:0;font-size:1.3rem}
+.welcome ol{margin:0;padding-left:1.3em;display:grid;gap:2px}
+.welcome .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:4px}
+
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:20px 0 10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--paper);border-color:var(--accent);font-weight:700}
+.zoom{display:flex;gap:4px}
+.zoom button{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:1.2rem;font-weight:700}
+.status{color:var(--muted);margin:8px 0}
+.finder{position:relative;margin:20px 0 0}
+.finder input{padding:12px 14px;font-size:16px;border-radius:12px}
+.results{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:12;background:var(--card);border:1px solid var(--line);border-radius:12px;max-height:50vh;overflow:auto;box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.results .pick{border:0;border-bottom:1px solid var(--line);border-radius:0}
+.results .pick:last-child{border-bottom:0}
+.nav{margin:14px 0 0;padding:12px 14px;border-radius:14px;background:var(--accent-soft);display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.nav .t{flex-basis:100%;font-weight:500}
+.nav .t b{font-family:var(--display);font-size:1.1rem}
+.up{border:1px solid var(--accent);background:var(--card);color:var(--accent);border-radius:999px;padding:6px 12px;font-weight:700}
+.more{margin-top:8px;border:1px dashed var(--accent);background:transparent;color:var(--accent);border-radius:999px;padding:5px 12px;font-weight:700;font-size:.85rem}
+.card.root{border-color:var(--accent);background:var(--accent-soft)}
+
+.stage{overflow:auto;border:1px solid var(--line);border-radius:16px;background:var(--card);padding:24px 12px;min-height:240px;-webkit-overflow-scrolling:touch}
+.tree{width:max-content;min-width:100%;margin:0 auto}
+.tree ul{position:relative;display:flex;justify-content:center;margin:0;padding:22px 0 0}
+.tree > ul{padding-top:0}
+.tree li{list-style:none;position:relative;padding:22px 8px 0;display:flex;flex-direction:column;align-items:center}
+.tree > ul > li{padding-top:0}
+.tree li::before,.tree li::after{content:"";position:absolute;top:0;right:50%;width:50%;height:22px;border-top:2px solid var(--line)}
+.tree li::after{right:auto;left:50%;border-left:2px solid var(--line)}
+.tree li:only-child::before,.tree li:only-child::after{display:none}
+.tree li:only-child{padding-top:0}
+.tree li:first-child::before,.tree li:last-child::after{border:0}
+.tree li:last-child::before{border-right:2px solid var(--line);border-radius:0 8px 0 0}
+.tree li:first-child::after{border-radius:8px 0 0 0}
+.tree ul ul::before{content:"";position:absolute;top:0;left:50%;height:22px;border-left:2px solid var(--line)}
+.tree > ul > li::before,.tree > ul > li::after{display:none}
+.couple{display:flex;align-items:center;gap:4px;position:relative}
+.inf{font-family:var(--display);font-weight:700;color:var(--accent);font-size:1.1rem}
+.card{width:128px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 8px 9px;border:2px solid var(--line);border-radius:14px;background:var(--card);color:var(--ink);text-align:center}
+.card:hover{border-color:var(--accent)}
+.card.sel{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.9rem;background:var(--accent-soft);color:var(--accent)}
+.av.M{background:var(--him)} .av.F{background:var(--her)}
+.card .n{font-weight:700;line-height:1.15;font-size:.95rem}
+.card .a{font-size:.8rem;color:var(--muted);line-height:1.15}
+.card .y{font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.loose{margin-top:14px;color:var(--muted);font-size:.95rem;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+.empty{text-align:center;color:var(--muted);padding:30px 10px}
+.empty h2{font-family:var(--display);color:var(--ink);margin:0 0 6px}
+
+.fab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:15;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+
+/* hoja */
+.scrim{position:fixed;inset:0;background:rgba(10,15,12,.5);z-index:20;display:flex;justify-content:center;align-items:flex-end}
+.sheet{background:var(--paper);color:var(--ink);width:100%;max-width:620px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:20px max(18px,env(safe-area-inset-right,0px)) calc(22px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+@media (min-width:700px){.scrim{align-items:center}.sheet{border-radius:18px}}
+.sheet h2{font-family:var(--display);margin:0 0 4px;font-size:1.5rem;text-wrap:balance}
+.step{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:700;margin:0 0 4px}
+.hint{color:var(--muted);margin:0 0 14px}
+.picklist{display:flex;flex-direction:column;gap:6px;margin-top:10px;max-height:50vh;overflow:auto}
+.pick{display:flex;gap:12px;align-items:center;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 12px;text-align:left;width:100%}
+.pick:hover{border-color:var(--accent)}
+.pick .meta{color:var(--muted);font-size:.88rem}
+.rels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rel{border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:14px 10px;font-weight:700;font-size:1.05rem}
+.rel:hover{border-color:var(--accent)}
+.rel:disabled{opacity:.45;cursor:not-allowed}
+.rel small{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.full{grid-column:1/-1}
+@media (max-width:520px){.grid{grid-template-columns:1fr}}
+label{display:flex;flex-direction:column;gap:4px;font-size:.92rem;color:var(--muted);font-weight:500;min-width:0}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 11px;width:100%;min-width:0}
+textarea{min-height:70px;resize:vertical}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:10px;font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--paper);font-weight:700}
+details{grid-column:1/-1;border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;color:var(--accent);font-weight:700;padding:4px 0}
+details .grid{margin-top:10px}
+.foot{display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap;margin-top:18px}
+.foot .r{display:flex;gap:8px;margin-left:auto}
+.err{color:var(--danger);margin:10px 0 0}
+.ficha-top{display:flex;gap:14px;align-items:center;margin-bottom:8px}
+.ficha-top .av{width:56px;height:56px;font-size:1.2rem}
+dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 14px;margin:8px 0 16px}
+dt{color:var(--muted)} dd{margin:0;min-width:0}
+.notas{white-space:pre-wrap;margin:0 0 16px}
+.by{font-size:.85rem;color:var(--muted);margin:0 0 14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-weight:700;z-index:30}
+.session{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;justify-content:flex-end;color:var(--muted);font-size:.92rem}
+.session b{color:var(--ink);font-weight:500;overflow-wrap:anywhere}
+.ok{color:var(--accent);font-weight:700;margin:10px 0 0}
+@media (prefers-reduced-motion:no-preference){.card,.pick,.rel{transition:border-color .15s,box-shadow .15s}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Árbol González Hoyos</h1>
+      <p class="sub" id="count">El árbol que construimos entre toda la familia</p>
+    </div>
+    <div class="session" id="session"></div>
+  </header>
+
+  <section class="welcome" id="welcome" hidden>
+    <h2>¿Eres de la familia? Ayúdanos a completarlo</h2>
+    <ol>
+      <li>Toca <b>Agregar familiar</b>.</li>
+      <li>Elige a alguien que ya esté en el árbol y di qué es de esa persona.</li>
+      <li>Escribe lo que sepas. Con el nombre basta; si no sabes la fecha exacta, pon el año.</li>
+    </ol>
+    <div class="row"><button class="btn" data-wiz="1">Agregar familiar</button><button class="link" id="hide-welcome">Entendido, ocultar</button></div>
+  </section>
+
+  <div class="finder">
+    <input id="find" type="search" placeholder="Buscar a alguien y ver su familia hacia abajo" autocomplete="off" aria-label="Buscar persona">
+    <div class="results" id="find-res" hidden></div>
+  </div>
+  <div class="nav" id="nav" hidden></div>
+  <div class="bar">
+    <div class="chips" id="ramas" aria-label="Ramas de la familia"></div>
+    <div class="zoom"><button id="z-out" aria-label="Alejar">−</button><button id="z-in" aria-label="Acercar">+</button></div>
+  </div>
+  <p class="status" id="status">Cargando el árbol…</p>
+  <div class="stage" id="stage"><div class="tree" id="tree"></div></div>
+  <div class="loose" id="loose" hidden></div>
+  <p class="sub" style="font-size:.9rem;margin-top:10px">Toca a cualquier persona para ver sus datos o agregar a sus padres, hijos, hermanos o pareja.</p>
+</div>
+
+<button class="btn big fab" id="fab" data-wiz="1">+ Agregar familiar</button>
+
+<div class="scrim" id="scrim" hidden>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const FIELDS = ["nombre","apellido1","apellido2","sexo","pareja","nacimiento","lugarNacimiento","defuncion","lugarDefuncion","padre","madre","notas"];
+let sb=null, session=null, canWrite=false, pendiente=false, people=new Map(), loaded=false;
+let rootId=null, selId=null, zoom=1, viewRoot=null;
+const MAXD = 3; // generaciones visibles debajo de la persona de arriba
+let flow=null; // {mode:'new'|'edit', id, ofId, rel}
+let delArmed=false;
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const get = id => id ? people.get(id) : null;
+const fullName = p => p ? [p.nombre,p.apellido1,p.apellido2].filter(Boolean).join(" ") || "Sin nombre" : "";
+const fmtDate = d => { if(!d) return ""; const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(d.trim()); return m ? `${+m[3]} ${MESES[+m[2]-1]} ${m[1]}` : d; };
+const year = d => (/(\d{4})/.exec(d||"")||[])[1] || "";
+const span = p => { const a=year(p.nacimiento), b=year(p.defuncion); if(p.defuncion) return `${a||"?"} – ${b||"?"}`; return a ? `n. ${a}` : ""; };
+const initials = p => ((p.nombre||"?")[0] + ((p.apellido1||"")[0]||"")).toUpperCase();
+const norm = s => (s||"").toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu,"");
+const byBirth = (a,b) => (year(get(a).nacimiento)||"9999").localeCompare(year(get(b).nacimiento)||"9999");
+const childrenOf = (...ids) => [...people.keys()].filter(k => { const p=get(k); return ids.some(i => i && (p.padre===i || p.madre===i)); }).sort(byBirth);
+const sortedIds = () => [...people.keys()].sort((a,b)=> norm(fullName(get(a))).localeCompare(norm(fullName(get(b)))));
+const store = { get(k){ try{return localStorage.getItem(k)}catch(_){return null} }, set(k,v){ try{localStorage.setItem(k,v)}catch(_){} } };
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast.t); toast.t=setTimeout(()=>t.hidden=true,2400); }
+
+/* ---------- árbol ---------- */
+function computeRoots(){
+  const cands = [];
+  for(const [id,p] of people){
+    if(get(p.padre)||get(p.madre)) continue;
+    const sp = get(p.pareja);
+    if(sp && (get(sp.padre)||get(sp.madre))) continue; // aparece como pareja en la rama del otro
+    if(sp && !(get(sp.padre)||get(sp.madre))){ // pareja también raíz: quedarse con uno
+      const keep = (p.sexo==="M" && sp.sexo!=="M") ? id : (sp.sexo==="M" && p.sexo!=="M") ? p.pareja : (id < p.pareja ? id : p.pareja);
+      if(keep!==id) continue;
+    }
+    cands.push(id);
+  }
+  return cands.map(id => { const seen=new Set(); subtree(id,seen); return {id, size:seen.size}; }).sort((a,b)=>b.size-a.size);
+}
+function rootLabel(id){
+  const p=get(id), sp=get(p.pareja);
+  const a=[p.apellido1, sp && sp.apellido1].filter(Boolean);
+  return a.length ? "Familia " + [...new Set(a)].join(" ") : fullName(p);
+}
+function card(id){
+  const p=get(id);
+  return `<button class="card${id===selId?" sel":""}" data-open="${esc(id)}"><span class="av ${esc(p.sexo||"")}">${esc(initials(p))}</span><span class="n">${esc(p.nombre||"Sin nombre")}</span><span class="a">${esc([p.apellido1,p.apellido2].filter(Boolean).join(" "))}</span>${span(p)?`<span class="y">${esc(span(p))}</span>`:""}</button>`;
+}
+function subtree(id, seen, depth){
+  seen.add(id);
+  const p=get(id);
+  const sp = get(p.pareja) && !seen.has(p.pareja) ? p.pareja : null;
+  if(sp) seen.add(sp);
+  const kids = childrenOf(id, sp).filter(k=>!seen.has(k));
+  const cut = depth!==undefined && depth>=MAXD && kids.length;
+  const rootCls = depth===0 ? " root" : "";
+  const couple = `<div class="couple">${card(id).replace('class="card','class="card'+rootCls)}${sp?`<span class="inf" aria-label="pareja">∞</span>${card(sp)}`:""}</div>`;
+  if(cut){
+    const s=new Set(seen); subtree(id, s); const n = s.size - seen.size;
+    kids.forEach(k=>{ const t=new Set(); subtree(k,t); t.forEach(x=>seen.add(x)); });
+    return `<li>${couple}<button class="more" data-down="${esc(id)}">↓ Ver ${n} más</button></li>`;
+  }
+  kids.forEach(k=>seen.add(k));
+  const inner = kids.map(k=>{ seen.delete(k); return subtree(k,seen,depth===undefined?undefined:depth+1); }).join("");
+  return `<li>${couple}${kids.length?`<ul>${inner}</ul>`:""}</li>`;
+}
+
+function renderNav(){
+  const nav=$("#nav");
+  if(!viewRoot || !get(viewRoot)){ nav.hidden=true; return; }
+  const p=get(viewRoot), ups=[];
+  if(get(p.padre)) ups.push(`<button class="up" data-down="${esc(p.padre)}">↑ Subir a su papá, ${esc(get(p.padre).nombre)}</button>`);
+  if(get(p.madre)) ups.push(`<button class="up" data-down="${esc(p.madre)}">↑ Subir a su mamá, ${esc(get(p.madre).nombre)}</button>`);
+  nav.innerHTML = `<span class="t">Viendo a <b>${esc(fullName(p))}</b> y su familia hacia abajo</span>${ups.join("")}<button class="link" data-all="1">Ver el árbol completo</button>`;
+  nav.hidden=false;
+}
+
+/* buscador */
+$("#find").addEventListener("input", ()=>{
+  const q=norm($("#find").value.trim()), box=$("#find-res");
+  if(!q){ box.hidden=true; return; }
+  const ids=sortedIds().filter(id=>norm(fullName(get(id))).includes(q)).slice(0,20);
+  box.innerHTML = ids.length ? ids.map(id=>{const p=get(id);return `<button class="pick" data-down="${esc(id)}"><span class="av ${esc(p.sexo||"")}">${esc(initials(p))}</span><span><b>${esc(fullName(p))}</b><br><span class="meta">${esc(span(p)||" ")}</span></span></button>`}).join("") : `<p class="hint" style="padding:12px;margin:0">Nadie coincide.</p>`;
+  box.hidden=false;
+});
+document.addEventListener("click", e=>{ if(!e.target.closest(".finder")) $("#find-res").hidden=true; });
+
+function goDown(id){
+  viewRoot=id; selId=id; $("#find").value=""; $("#find-res").hidden=true;
+  if(!$("#scrim").hidden) closeSheet();
+  renderTree();
+  const st=$("#stage"); st.scrollTop=0;
+  setTimeout(()=>{ centerStage(); st.scrollIntoView({behavior:"smooth",block:"start"}); },40);
+}
+
+function renderTree(){
+  const tree=$("#tree"), ramasEl=$("#ramas"), loose=$("#loose");
+  $("#count").textContent = people.size ? `${people.size} ${people.size===1?"persona":"personas"} en el árbol · lo construimos entre toda la familia` : "El árbol que construimos entre toda la familia";
+  if(!people.size){
+    ramasEl.innerHTML=""; loose.hidden=true;
+    tree.innerHTML = `<div class="empty"><h2>Todavía no hay nadie</h2><p>${canWrite?"Empieza agregando a alguien de la familia.":"Cuando la familia agregue personas, aparecerán aquí."}</p></div>`;
+    return;
+  }
+  const roots = computeRoots();
+  const branches = roots.filter(r=>r.size>1);
+  if(!branches.find(r=>r.id===rootId)) rootId = branches.length ? branches[0].id : null;
+  if(viewRoot && !get(viewRoot)) viewRoot=null;
+  const top = viewRoot || rootId;
+  ramasEl.innerHTML = branches.length>1 ? branches.map(r=>`<button class="chip" data-root="${esc(r.id)}" aria-pressed="${!viewRoot && r.id===rootId}">${esc(rootLabel(r.id))}</button>`).join("") : (branches[0] && !viewRoot ? `<span class="sub" style="margin:0">${esc(rootLabel(branches[0].id))}</span>` : "");
+  renderNav();
+  const seen=new Set();
+  tree.innerHTML = top ? `<ul>${subtree(top,seen,0)}</ul>` : `<div class="empty"><p>Aún no hay familias conectadas. Toca a alguien de abajo y agrégale padres o hijos.</p></div>`;
+  tree.style.zoom = zoom;
+  const all=new Set(); branches.forEach(r=>subtree(r.id,all));
+  if(viewRoot){ $("#loose").hidden=true; tree.style.zoom=zoom; return; }
+  const sueltos=[...people.keys()].filter(id=>!all.has(id));
+  loose.hidden = !sueltos.length;
+  loose.innerHTML = sueltos.length ? `<span>Sin conectar todavía:</span>${sueltos.map(id=>`<button class="chip" data-open="${esc(id)}">${esc(fullName(get(id)))}</button>`).join("")}` : "";
+}
+
+$("#z-in").addEventListener("click",()=>{ zoom=Math.min(1.4,+(zoom+0.15).toFixed(2)); $("#tree").style.zoom=zoom; });
+$("#z-out").addEventListener("click",()=>{ zoom=Math.max(0.5,+(zoom-0.15).toFixed(2)); $("#tree").style.zoom=zoom; });
+
+function centerStage(){
+  const st=$("#stage"), el = st.querySelector(".card.sel") || st.querySelector(".tree > ul > li > .couple");
+  if(!el) return;
+  const r=el.getBoundingClientRect(), s=st.getBoundingClientRect();
+  st.scrollLeft += (r.left + r.width/2) - (s.left + s.width/2);
+}
+
+/* ---------- hoja ---------- */
+function openSheet(html){ $("#sheet").innerHTML = html; $("#scrim").hidden=false; const f=$("#sheet").querySelector("[autofocus],input,button"); if(f) setTimeout(()=>f.focus(),30); }
+function closeSheet(){ $("#scrim").hidden=true; flow=null; delArmed=false; }
+$("#scrim").addEventListener("click", e=>{ if(e.target.id==="scrim") closeSheet(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && !$("#scrim").hidden) closeSheet(); });
+
+function showFicha(id){
+  selId=id; renderTree();
+  const p=get(id); if(!p) return;
+  const rows=[];
+  if(p.nacimiento||p.lugarNacimiento) rows.push(["Nació", [fmtDate(p.nacimiento),p.lugarNacimiento].filter(Boolean).join(", ")]);
+  if(p.defuncion||p.lugarDefuncion) rows.push(["Falleció", [fmtDate(p.defuncion),p.lugarDefuncion].filter(Boolean).join(", ")]);
+  if(get(p.pareja)) rows.push(["Pareja", fullName(get(p.pareja))]);
+  if(get(p.padre)) rows.push(["Padre", fullName(get(p.padre))]);
+  if(get(p.madre)) rows.push(["Madre", fullName(get(p.madre))]);
+  const hijos=childrenOf(id); if(hijos.length) rows.push(["Hijos", hijos.map(h=>fullName(get(h))).join(", ")]);
+  const sib=[...new Set(childrenOf(p.padre,p.madre))].filter(h=>h!==id); if((p.padre||p.madre)&&sib.length) rows.push(["Hermanos", sib.map(h=>fullName(get(h))).join(", ")]);
+  openSheet(`
+    <div class="ficha-top"><span class="av ${esc(p.sexo||"")}">${esc(initials(p))}</span><h2>${esc(fullName(p))}</h2></div>
+    ${rows.length?`<dl>${rows.map(([k,v])=>`<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`:`<p class="hint">Aún no hay más datos de esta persona.</p>`}
+    ${p.notas?`<p class="notas">${esc(p.notas)}</p>`:""}
+    ${p.agregadoPor?`<p class="by">Datos aportados por ${esc(p.agregadoPor)}</p>`:""}
+    <button class="btn" data-down="${esc(id)}" style="width:100%;margin-bottom:16px">Ver su familia desde aquí hacia abajo</button>
+    ${canWrite?`<p class="step">Agregar a su familia</p>${relButtons(id)}`:`<p class="hint">${pendiente?"Tu correo está pendiente de aprobación. Cuando Diego lo apruebe podrás agregar y corregir datos.":`Para agregar familiares o corregir datos, <button class="link" data-login="1">entra con tu correo</button>.`}</p>`}
+    <div class="foot">${canWrite?`<button class="btn ghost" data-edit="${esc(id)}">Corregir datos</button>`:"<span></span>"}<div class="r"><button class="btn ghost" data-close="1">Cerrar</button></div></div>`);
+}
+
+function relButtons(id){
+  const p=get(id), hasParent = get(p.padre)||get(p.madre);
+  const b=(rel,label,sub,dis)=>`<button class="rel" data-rel="${rel}" data-of="${esc(id)}"${dis?" disabled":""}>${label}${sub?`<small>${sub}</small>`:""}</button>`;
+  return `<div class="rels">
+    ${b("padre","Su papá", get(p.padre)?"Ya registrado":"", !!get(p.padre))}
+    ${b("madre","Su mamá", get(p.madre)?"Ya registrada":"", !!get(p.madre))}
+    ${b("hijo","Un hijo o hija","")}
+    ${b("hermano","Un hermano o hermana", hasParent?"":"Agrega antes a su papá o mamá", !hasParent)}
+    ${b("pareja","Su pareja", get(p.pareja)?"Ya registrada":"", !!get(p.pareja))}
+  </div>`;
+}
+
+/* asistente */
+function wizPick(){
+  flow={mode:"new"};
+  openSheet(`<p class="step">Paso 1 de 3</p><h2>¿Con quién está emparentada la persona que vas a agregar?</h2>
+    <p class="hint">Busca a alguien que ya esté en el árbol. Por ejemplo: si vas a agregar a tu abuela, elige a tu papá o a tu mamá.</p>
+    <input id="w-q" type="search" placeholder="Escribe un nombre" autofocus>
+    <div class="picklist" id="w-list"></div>
+    <div class="foot"><button class="link" data-free="1">No encuentro a nadie: agregar sin enlazar</button><div class="r"><button class="btn ghost" data-close="1">Cancelar</button></div></div>`);
+  const draw=()=>{ const q=norm($("#w-q").value); $("#w-list").innerHTML = sortedIds().filter(id=>!q||norm(fullName(get(id))).includes(q)).map(id=>{const p=get(id);return `<button class="pick" data-pick="${esc(id)}"><span class="av ${esc(p.sexo||"")}">${esc(initials(p))}</span><span><b>${esc(fullName(p))}</b><br><span class="meta">${esc(span(p)||" ")}</span></span></button>`}).join("") || `<p class="hint">Nadie coincide.</p>`; };
+  $("#w-q").addEventListener("input",draw); draw();
+}
+function wizRel(ofId){
+  const p=get(ofId);
+  openSheet(`<p class="step">Paso 2 de 3</p><h2>¿Qué es de ${esc(p.nombre||fullName(p))}?</h2><p class="hint">La persona que vas a agregar es…</p>
+    ${relButtons(ofId)}
+    <div class="foot"><button class="btn ghost" data-wiz="1">Atrás</button><div class="r"><button class="btn ghost" data-close="1">Cancelar</button></div></div>`);
+}
+
+function prefill(rel, ofId){
+  const of=get(ofId)||{}, pre={};
+  if(rel==="padre"){ pre.sexo="M"; pre.apellido1=of.apellido1||""; }
+  if(rel==="madre"){ pre.sexo="F"; pre.apellido1=of.apellido2||""; }
+  if(rel==="pareja"){ pre.pareja=ofId; pre.sexo = of.sexo==="M"?"F":of.sexo==="F"?"M":""; }
+  if(rel==="hijo"){
+    const other = get(of.pareja) ? of.pareja : "";
+    if(of.sexo==="F"){ pre.madre=ofId; pre.padre=other; } else { pre.padre=ofId; pre.madre=other; }
+    pre.apellido1 = get(pre.padre)?.apellido1 || ""; pre.apellido2 = get(pre.madre)?.apellido1 || "";
+  }
+  if(rel==="hermano"){ pre.padre=of.padre||""; pre.madre=of.madre||""; pre.apellido1=of.apellido1||""; pre.apellido2=of.apellido2||""; }
+  return pre;
+}
+const REL_TXT = {padre:"su papá",madre:"su mamá",hijo:"su hijo o hija",hermano:"su hermano o hermana",pareja:"su pareja"};
+
+function personForm(){
+  const isEdit = flow.mode==="edit";
+  const p = isEdit ? {...get(flow.id)} : (flow.rel ? prefill(flow.rel, flow.ofId) : {});
+  const of = get(flow.ofId);
+  const title = isEdit ? `Corregir datos de ${esc(get(flow.id).nombre||"")}` : of ? `Agregar a ${REL_TXT[flow.rel]} de ${esc(of.nombre||fullName(of))}` : "Agregar persona";
+  const sexoFixed = !isEdit && (flow.rel==="padre"||flow.rel==="madre");
+  const opt = (sel, ex) => `<option value="">— Nadie —</option>` + sortedIds().filter(i=>i!==ex).map(i=>`<option value="${esc(i)}"${i===sel?" selected":""}>${esc(fullName(get(i)))}</option>`).join("");
+  openSheet(`${isEdit?"":`<p class="step">${of?"Paso 3 de 3":"Nueva persona"}</p>`}<h2>${title}</h2>
+    <p class="hint">Escribe lo que sepas. Con el nombre basta para empezar.</p>
+    <form id="pf" novalidate><div class="grid">
+      <label class="full">Nombre(s)<input id="f-nombre" value="${esc(p.nombre)}" autocomplete="off" autofocus></label>
+      <label>Primer apellido<input id="f-apellido1" value="${esc(p.apellido1)}" autocomplete="off"></label>
+      <label>Segundo apellido<input id="f-apellido2" value="${esc(p.apellido2)}" autocomplete="off"></label>
+      ${sexoFixed?`<input type="hidden" id="f-sexo" value="${esc(p.sexo)}">`:`<div class="full"><label style="margin-bottom:4px">Es</label><div class="seg" id="seg-sexo"><button type="button" data-sexo="M" aria-pressed="${p.sexo==="M"}">Hombre</button><button type="button" data-sexo="F" aria-pressed="${p.sexo==="F"}">Mujer</button></div><input type="hidden" id="f-sexo" value="${esc(p.sexo||"")}"></div>`}
+      <label>Año o fecha de nacimiento<input id="f-nacimiento" value="${esc(p.nacimiento)}" placeholder="Ej. 1958 o 1958-03-14" inputmode="text"></label>
+      <label>Lugar de nacimiento<input id="f-lugarNacimiento" value="${esc(p.lugarNacimiento)}" placeholder="Ciudad, estado o país"></label>
+      <details${isEdit?" open":""}><summary>Más datos (opcional)</summary><div class="grid">
+        <label>Año o fecha de fallecimiento<input id="f-defuncion" value="${esc(p.defuncion)}" placeholder="Déjalo vacío si vive"></label>
+        <label>Lugar de fallecimiento<input id="f-lugarDefuncion" value="${esc(p.lugarDefuncion)}"></label>
+        <label>Papá<select id="f-padre">${opt(p.padre, flow.id)}</select></label>
+        <label>Mamá<select id="f-madre">${opt(p.madre, flow.id)}</select></label>
+        <label class="full">Pareja<select id="f-pareja">${opt(p.pareja, flow.id)}</select></label>
+        <label class="full">Notas<textarea id="f-notas" placeholder="Profesión, dónde vivió, anécdotas…">${esc(p.notas)}</textarea></label>
+      </div></details>
+      <label class="full">Tu nombre (para saber quién aportó el dato)<input id="f-by" value="${esc(store.get("arbol-by")||"")}" placeholder="Ej. Tía Lupe" autocomplete="name"></label>
+    </div>
+    <p class="err" id="f-err" hidden></p>
+    <div class="foot">${isEdit?`<button type="button" class="btn danger" id="f-del">Eliminar</button>`:(of?`<button type="button" class="btn ghost" data-back="1">Atrás</button>`:"<span></span>")}
+      <div class="r"><button type="button" class="btn ghost" data-close="1">Cancelar</button><button type="submit" class="btn" id="f-save">Guardar</button></div></div>
+    </form>`);
+  $("#seg-sexo")?.addEventListener("click", e=>{ const b=e.target.closest("[data-sexo]"); if(!b) return; $("#f-sexo").value=b.dataset.sexo; $("#seg-sexo").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b)); });
+  $("#pf").addEventListener("submit", save);
+  $("#f-del")?.addEventListener("click", del);
+}
+
+function showErr(msg){ const e=$("#f-err"); if(!e) return toast(msg); e.textContent=msg; e.hidden=false; const s=$("#f-save"); if(s) s.disabled=false; }
+function errMsg(err){
+  if(err && (err.code==="42501" || err.code==="sin_permiso")){ refreshPermisos(); return "Tu correo todavía no está aprobado para editar. Pide a Diego que lo apruebe."; }
+  if(err && /JWT|session/i.test(err.message||"")) return "Tu sesión caducó. Vuelve a entrar con tu correo.";
+  return "No se pudo guardar. Revisa tu conexión e inténtalo otra vez.";
+}
+const nuevoId = () => { const a="abcdefghijklmnopqrstuvwxyz0123456789", r=crypto.getRandomValues(new Uint8Array(20)); return [...r].map(x=>a[x%36]).join(""); };
+// escribe y devuelve las filas afectadas; si RLS bloquea una actualización no hay error, solo 0 filas
+async function q(promise){ const {data,error}=await promise; if(error) throw error; if(Array.isArray(data) && !data.length) throw {code:"sin_permiso"}; return data; }
+const putLocal = rows => { (rows||[]).forEach(r=>people.set(r.id, r)); };
+
+async function save(e){
+  e.preventDefault(); if(!sb) return;
+  const d={}; for(const k of FIELDS){ const el=$("#f-"+k); d[k]=(el?el.value:"").trim(); }
+  if(!d.nombre){ showErr("Escribe al menos el nombre."); $("#f-nombre").focus(); return; }
+  const by=$("#f-by").value.trim(); if(by) store.set("arbol-by", by);
+  const isEdit = flow.mode==="edit";
+  const before = isEdit ? (get(flow.id)||{}) : {};
+  d.agregadoPor = isEdit ? (before.agregadoPor || by) : by;
+  if(isEdit && by && by!==before.agregadoPor) d.corregidoPor = by;
+  d.actualizado = new Date().toISOString();
+  $("#f-save").disabled=true;
+  const {rel, ofId} = flow;
+  try{
+    const id = isEdit ? flow.id : nuevoId();
+    const T = sb.from("personas");
+    // padre/madre: si el otro progenitor existe y no tiene pareja, unirlos
+    if(!isEdit && (rel==="padre"||rel==="madre") && !d.pareja){
+      const other = get(ofId)?.[rel==="padre"?"madre":"padre"];
+      if(other && get(other) && !get(get(other).pareja)) d.pareja = other;
+    }
+    if(isEdit) putLocal(await q(T.update(d).eq("id",id).select()));
+    else putLocal(await q(T.insert({id, ...d}).select()));
+    const now = d.actualizado;
+    if(d.pareja && d.pareja!==before.pareja && get(d.pareja)) putLocal(await q(T.update({pareja:id, actualizado:now}).eq("id",d.pareja).select()));
+    if(before.pareja && before.pareja!==d.pareja && get(before.pareja)?.pareja===id) putLocal(await q(T.update({pareja:"", actualizado:now}).eq("id",before.pareja).select()));
+    if(!isEdit && (rel==="padre"||rel==="madre") && get(ofId)) putLocal(await q(T.update({[rel]:id, actualizado:now}).eq("id",ofId).select()));
+    selId=id; closeSheet(); renderTree(); toast(isEdit?"Cambios guardados":`${d.nombre} se agregó al árbol`);
+    setTimeout(centerStage,250);
+  }catch(err){ showErr(errMsg(err)); }
+}
+
+async function del(){
+  const b=$("#f-del");
+  if(!delArmed){ delArmed=true; b.textContent="Toca otra vez para eliminar"; b.classList.add("armed"); return; }
+  const id=flow.id, p=get(id)||{};
+  try{
+    await q(sb.from("personas").delete().eq("id",id).select());
+    people.delete(id);
+    if(get(p.pareja)?.pareja===id) putLocal(await q(sb.from("personas").update({pareja:"", actualizado:new Date().toISOString()}).eq("id",p.pareja).select()));
+    if(selId===id) selId=null;
+    closeSheet(); renderTree(); toast("Persona eliminada");
+  }catch(err){ showErr(errMsg(err)); }
+}
+
+/* clics */
+document.addEventListener("click", e=>{
+  const t=e.target.closest("[data-open],[data-wiz],[data-pick],[data-rel],[data-edit],[data-close],[data-free],[data-back],[data-root],[data-down],[data-all],[data-login],[data-logout]");
+  if(!t || t.disabled) return;
+  const ds=t.dataset;
+  if(ds.down) goDown(ds.down);
+  else if(ds.all){ viewRoot=null; renderTree(); setTimeout(centerStage,30); }
+  else if(ds.open) showFicha(ds.open);
+  else if(ds.root){ rootId=ds.root; viewRoot=null; renderTree(); setTimeout(centerStage,30); }
+  else if(ds.login){ openLogin(); }
+  else if(ds.logout){ sb.auth.signOut(); }
+  else if(ds.wiz){ if(!canWrite) return pendiente ? showPendiente() : openLogin(); people.size ? wizPick() : (flow={mode:"new"}, personForm()); }
+  else if(ds.pick){ flow={mode:"new", ofId:ds.pick}; wizRel(ds.pick); }
+  else if(ds.rel){ flow={mode:"new", ofId:ds.of, rel:ds.rel}; personForm(); }
+  else if(ds.free){ flow={mode:"new"}; personForm(); }
+  else if(ds.back){ wizRel(flow.ofId); }
+  else if(ds.edit){ flow={mode:"edit", id:ds.edit}; personForm(); }
+  else if(ds.close){ closeSheet(); }
+});
+
+$("#hide-welcome").addEventListener("click",()=>{ $("#welcome").hidden=true; store.set("arbol-welcome","0"); });
+
+function applyWrite(){
+  $("#fab").hidden = false;
+  $("#welcome").hidden = store.get("arbol-welcome")==="0" || pendiente;
+  const el=$("#session");
+  if(!sb){ el.innerHTML=""; return; }
+  if(!session) el.innerHTML = `<button class="btn ghost" data-login="1">Entrar para editar</button>`;
+  else el.innerHTML = `<span>${canWrite?"Editando como":pendiente?"Pendiente de aprobación:":"Conectado como"} <b>${esc(session.user.email)}</b></span><button class="link" data-logout="1">Salir</button>`;
+}
+
+/* ---------- acceso por enlace mágico ---------- */
+function openLogin(){
+  openSheet(`<h2>Entrar con tu correo</h2>
+    <p class="hint">Te mandamos un enlace a tu correo. Ábrelo en este mismo dispositivo y quedarás dentro, sin contraseña. Solo los correos aprobados por Diego pueden agregar o corregir datos; los demás pueden ver el árbol.</p>
+    <form id="lf" novalidate><label>Tu correo<input id="l-email" type="email" autocomplete="email" inputmode="email" placeholder="nombre@correo.com" value="${esc(store.get("arbol-email")||"")}" autofocus></label>
+    <p class="err" id="f-err" hidden></p><p class="ok" id="l-ok" hidden></p>
+    <div class="foot"><span></span><div class="r"><button type="button" class="btn ghost" data-close="1">Cancelar</button><button type="submit" class="btn" id="f-save">Mandarme el enlace</button></div></div></form>`);
+  $("#lf").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const email=$("#l-email").value.trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showErr("Escribe un correo válido.");
+    store.set("arbol-email", email);
+    $("#f-save").disabled=true; $("#f-err").hidden=true;
+    const {error}=await sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.origin + location.pathname}});
+    if(error){ return showErr(/rate|seconds/i.test(error.message) ? "Ya te mandamos un enlace hace poco. Espera un momento y revisa tu correo (también la carpeta de spam)." : "No se pudo mandar el enlace. Inténtalo otra vez."); }
+    const ok=$("#l-ok"); ok.textContent=`Listo. Revisa ${email} y toca el enlace (mira también en spam).`; ok.hidden=false;
+  });
+}
+function showPendiente(){
+  openSheet(`<h2>Tu correo está pendiente de aprobación</h2>
+    <p class="hint">Ya avisamos que quieres colaborar con <b>${esc(session?.user?.email||"")}</b>. En cuanto Diego lo apruebe podrás agregar familiares y corregir datos (solo tendrás que recargar la página).</p>
+    <div class="foot"><span></span><div class="r"><button class="btn" data-close="1">Entendido</button></div></div>`);
+}
+async function refreshPermisos(){
+  canWrite=false; pendiente=false;
+  if(session){
+    const {data,error}=await sb.rpc("es_editor");
+    canWrite = !error && data===true;
+    if(!canWrite && !error){
+      pendiente=true;
+      // deja constancia de la solicitud para que Diego solo tenga que marcar "aprobado"
+      const by=store.get("arbol-by")||"";
+      await sb.from("editores").insert({email:session.user.email.toLowerCase(), nombre:by});
+    }
+  }
+  applyWrite(); renderTree();
+  if(selId && !$("#scrim").hidden && !flow) showFicha(selId);
+}
+
+/* ---------- datos ---------- */
+async function cargar(){
+  const {data,error}=await sb.from("personas").select("*");
+  if(error) throw error;
+  people=new Map(data.map(r=>[r.id,r]));
+  loaded=true; $("#status").hidden=true;
+  renderTree();
+}
+(async ()=>{
+  const C=window.ARBOL_CONFIG||{};
+  if(!window.supabase || !C.supabaseUrl || !C.supabaseKey){ $("#status").textContent="No se pudo conectar con el árbol. Recarga la página."; applyWrite(); renderTree(); return; }
+  sb = window.supabase.createClient(C.supabaseUrl, C.supabaseKey, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true}});
+  const {data:{session:s0}} = await sb.auth.getSession();
+  session=s0; applyWrite();
+  sb.auth.onAuthStateChange((ev, s)=>{
+    const changed = (s?.user?.id||null)!==(session?.user?.id||null);
+    session=s;
+    if(changed || ev==="SIGNED_IN"){ refreshPermisos(); if(ev==="SIGNED_IN" && s) toast("Has entrado como "+s.user.email); }
+  });
+  refreshPermisos();
+  const timer=setTimeout(()=>{ if(!loaded) $("#status").textContent="El árbol tarda en cargar. Revisa tu conexión."; },10000);
+  let first=true;
+  // tiempo real: aplica cada cambio de otra persona sin recargar
+  sb.channel("personas").on("postgres_changes",{event:"*",schema:"public",table:"personas"}, ev=>{
+    if(ev.eventType==="DELETE") people.delete(ev.old.id); else people.set(ev.new.id, ev.new);
+    renderTree();
+  }).subscribe(status=>{
+    if(status==="SUBSCRIBED") cargar().then(()=>{ clearTimeout(timer); if(first && people.size){ first=false; setTimeout(centerStage,50); } }).catch(()=>{ $("#status").hidden=false; $("#status").textContent="No se pudo cargar el árbol. Recarga la página."; });
+    else if(status==="CHANNEL_ERROR" || status==="TIMED_OUT"){ if(!loaded) cargar().catch(()=>{}); }
+  });
+  document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible" && loaded) cargar().catch(()=>{}); });
+  renderTree();
+})();
+</script>
+</body>
+</html>
